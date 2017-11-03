@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>ZanPHP Dashboard</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css">
+</head>
+
+<style>
+    body {
+        background: rgba(41, 52, 65, 1);
+        padding-top: 70px;
+
+    }
+
+    .chart {
+        width: 100%;
+        height: 300px;
+    }
+</style>
+
+<body>
+<div class="container-fluid charts">
+    <div class="row">
+        <div class="col-md-6">
+            <div id="workers_detail_total_request_count" class="chart"></div>
+        </div>
+        <div class="col-md-6">
+            <div id="workers_detail_request_count" class="chart"></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div id="request_count" class="chart"></div>
+        </div>
+        <div class="col-md-4">
+            <div id="worker_normal_exit" class="chart"></div>
+        </div>
+        <div class="col-md-4">
+            <div id="worker_abnormal_exit" class="chart"></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div id="connection_num" class="chart"></div>
+        </div>
+        <div class="col-md-4">
+            <div id="task_worker_normal_exit" class="chart"></div>
+        </div>
+        <div class="col-md-4">
+            <div id="task_worker_abnormal_exit" class="chart"></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div id="accept_count" class="chart"></div>
+        </div>
+        <div class="col-md-4">
+            <div id="close_count" class="chart"></div>
+        </div>
+        <div class="col-md-4">
+            <div id="tasking_num" class="chart"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let conf = {
+            // type: "http",
+            // host: "127.0.0.1",
+            // port: 8030
+            type: "<?php echo $type ?>",
+            host: "<?php echo $host ?>",
+            port: "<?php echo $port ?>",
+            interval: 5,
+            max: 60
+        }
+
+        const time = () => (new Date()).toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-').replace(/\b\d\b/g, '0$&');
+        // const time = () => (new Date()).toLocaleString('zh-CN', { hour12: false }).split(" ")[1];
+
+        const post = (type, host, port) => {
+            let data = new FormData()
+            data.append("type", type)
+            data.append("host", host)
+            data.append("port", port)
+            return fetch("<?php echo $uri ?>", {
+                method: "POST",
+                body: data
+            }).then(res => res.json())
+        }
+
+
+        let rendors = []
+
+        const rendor = () => {
+            post(conf.type, conf.host, conf.port).then(json => {
+                try {
+                    rendors.forEach((rendor) => rendor(json))
+                } catch (error) {
+                    console.error(error)
+                }
+                setTimeout(rendor, conf.interval)
+            })
+        }
+        rendor()
+
+        const createChart = (title, selector, seriesNames, fmt) => {
+            if (typeof seriesNames === "function") {
+                fmt = seriesNames
+                seriesNames = [title]
+            }
+
+            const myChart = echarts.init(document.getElementById(selector), 'chalk')
+
+            let series = []
+
+            seriesNames.forEach(name => {
+                series.push({
+                    name: name,
+                    type: 'line',
+                    showSymbol: false,
+                    hoverAnimation: false,
+                    data: []
+                })
+            })
+
+            // 配置手册 http://echarts.baidu.com/option.html#title
+            let option = {
+                title: {
+                    left: '30%',
+                    right: '30%',
+                    text: title
+                },
+                tooltip: {
+                    trigger: 'axis'
+                },
+                xAxis: {
+                    type: 'time',
+                    splitLine: {
+                        show: false
+                    }
+                },
+                yAxis: {
+                    axisLabel: {fontSize: 9},
+                    type: 'value',
+                    boundaryGap: [0, '100%'],
+                    splitLine: {
+                        show: false
+                    }
+                },
+                series: series
+            }
+            myChart.setOption(option)
+
+            rendors.push((json) => {
+                series.forEach((serie, idx) => {
+                    if (serie.data.length > conf.max) {
+                        serie.data.shift()
+                    }
+                    serie.data.push({
+                        name: time(),
+                        value: [
+                            time(),
+                            fmt(json, idx)
+                        ]
+                    })
+                })
+
+                myChart.setOption({
+                    series: series
+                })
+            })
+        }
+
+        // TODO 尚未展示 数据
+        // var metrics = {
+        //     "start_time": 1509548904,
+        //     "last_reload": 0,
+        //     "total_worker": 1,
+        //     "total_task_worker": 0,
+        //     "active_worker": 1,
+        //     "idle_worker": 0,
+        //     "active_task_worker": 0,
+        //     "idle_task_worker": 0,
+        //     "max_active_worker": 1,
+        //     "max_active_task_worker": 0,
+        //     "workers_detail": [{
+        //         "start_time": 1509548904,
+        //         "status": "BUSY",
+        //         "type": "worker"
+        //     }]
+        // };
+
+        post(conf.type, conf.host, conf.port).then(json => {
+            const workerNum = json.workers_detail.length
+            let seriesNames = []
+            for (let i = 0; i < workerNum; i++) {
+                seriesNames.push("worker" + i)
+            }
+            createChart("Worker Total Request Count", 'workers_detail_total_request_count', seriesNames, (json, idx) => json.workers_detail[idx].total_request_count)
+            createChart("Worker Request Count", 'workers_detail_request_count', seriesNames, (json, idx) => json.workers_detail[idx].request_count)
+        })
+
+        createChart("Total Request Count", 'request_count', json => json.request_count)
+        createChart("Worker Normal Exit Count", 'worker_normal_exit', json => json.worker_normal_exit)
+        createChart("Worker Abnormal Exit Count", 'worker_abnormal_exit', json => json.worker_abnormal_exit)
+        createChart("Connection Count", 'connection_num', json => json.connection_num)
+        createChart("Task Worker Normal Exit Count", 'task_worker_normal_exit', json => json.task_worker_normal_exit)
+        createChart("Task Worker Abnormal Exit Count", 'task_worker_abnormal_exit', json => json.task_worker_abnormal_exit)
+
+        createChart("Accept Count", 'accept_count', json => json.accept_count)
+        createChart("Close Count", 'close_count', json => json.close_count)
+        createChart("Tasking Count", 'tasking_num', json => json.tasking_num)
+
+    }, false)
+
+</script>
+
+<script src="https://cdn.bootcss.com/echarts/3.7.2/echarts.min.js"></script>
+<script src="echarts-theme.js"></script>
+<script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.slim.min.js"></script>
+<script src="https://cdn.bootcss.com/popper.js/1.12.3/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>
