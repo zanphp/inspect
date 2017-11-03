@@ -99,13 +99,19 @@
         let rendors = []
 
         const rendor = () => {
+            let init = true
             post(conf.type, conf.host, conf.port).then(json => {
                 try {
                     rendors.forEach((rendor) => rendor(json))
                 } catch (error) {
                     console.error(error)
                 }
-                setTimeout(rendor, conf.interval)
+                if (init) {
+                    setTimeout(rendor, 1000)
+                    init = false
+                } else {
+                    setTimeout(rendor, conf.interval)
+                }
             })
         }
         rendor()
@@ -217,7 +223,6 @@
         createChart("Accept Count", 'accept_count', json => json.accept_count)
         createChart("Close Count", 'close_count', json => json.close_count)
         createChart("Tasking Count", 'tasking_num', json => json.tasking_num)
-
     }, false)
 
 </script>
