@@ -97,9 +97,8 @@
 
 
         let rendors = []
-
+        let init = true
         const rendor = () => {
-            let init = true
             post(conf.type, conf.host, conf.port).then(json => {
                 try {
                     rendors.forEach((rendor) => rendor(json))
