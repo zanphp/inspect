@@ -97,7 +97,6 @@
 
 
         let rendors = []
-        let init = true
         const rendor = () => {
             post(conf.type, conf.host, conf.port).then(json => {
                 try {
@@ -105,12 +104,7 @@
                 } catch (error) {
                     console.error(error)
                 }
-                if (init) {
-                    setTimeout(rendor, 1000)
-                    init = false
-                } else {
-                    setTimeout(rendor, conf.interval)
-                }
+                setTimeout(rendor, conf.interval)
             })
         }
         rendor();
