@@ -114,7 +114,7 @@
                 }
             })
         }
-        rendor()
+        rendor();
 
         const createChart = (title, selector, seriesNames, fmt) => {
             if (typeof seriesNames === "function") {
@@ -223,6 +223,7 @@
         createChart("Accept Count", 'accept_count', json => json.accept_count)
         createChart("Close Count", 'close_count', json => json.close_count)
         createChart("Tasking Count", 'tasking_num', json => json.tasking_num)
+
     }, false)
 
 </script>
